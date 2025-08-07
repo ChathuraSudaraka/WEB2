@@ -421,21 +421,9 @@ export const userService = {
 
   async updateUserProfile(userData) {
     try {
-      // Create URL-encoded form data for the servlet
-      const params = new URLSearchParams();
-      
-      params.append('firstName', userData.firstName || '');
-      params.append('lastName', userData.lastName || '');
-      params.append('email', userData.email || '');
-      params.append('phone', userData.phone || '');
-      params.append('address', userData.address || '');
-      params.append('city', userData.city || '');
-      params.append('postalCode', userData.postalCode || '');
-      params.append('country', userData.country || '');
-      
-      const response = await api.put('/user-profile', params, {
+      const response = await api.put('/user-profile', userData, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
       });
       

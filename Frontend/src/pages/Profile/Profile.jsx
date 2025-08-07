@@ -2,11 +2,11 @@ import React, { useState, useEffect, useContext } from 'react';
 import { userService } from '../../services/api';
 import { FiUser, FiMail, FiPhone, FiMapPin, FiSave, FiEdit3, FiLoader } from 'react-icons/fi';
 import AuthContext from '../../contexts/AuthContext';
-import ToastContext from '../../contexts/ToastContext';
+import { useToast } from '../../contexts/ToastContext';
 
 const Profile = () => {
   const { user, updateUser } = useContext(AuthContext);
-  const { showToast } = useContext(ToastContext);
+  const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,10 +43,10 @@ const Profile = () => {
           country: result.data.country || ''
         });
       } else {
-        showToast('Failed to load profile data', 'error');
+        toast.error('Failed to load profile data');
       }
     } catch (error) {
-      showToast('Error loading profile', 'error');
+      toast.error('Error loading profile');
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +65,7 @@ const Profile = () => {
     try {
       const result = await userService.updateUserProfile(profileData);
       if (result.success) {
-        showToast('Profile updated successfully!', 'success');
+        toast.success('Profile updated successfully!');
         setIsEditing(false);
         // Update user context if needed
         updateUser({
@@ -75,10 +75,10 @@ const Profile = () => {
           lastName: profileData.lastName
         });
       } else {
-        showToast(result.error || 'Failed to update profile', 'error');
+        toast.error(result.error || 'Failed to update profile');
       }
     } catch (error) {
-      showToast('Error updating profile', 'error');
+      toast.error('Error updating profile');
     } finally {
       setIsSaving(false);
     }
