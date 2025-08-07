@@ -200,9 +200,9 @@ export const productService = {
     }
   },
 
-  async updateProduct(productData) {
+  async updateProduct(id, productData) {
     try {
-      const response = await api.put(`/products/${productData.id}`, productData);
+      const response = await api.put(`/products/${id}`, productData);
       return { success: true, data: response.data };
     } catch (error) {
       return {
