@@ -406,19 +406,43 @@ export const orderService = {
 
   async createOrder(orderData) {
     try {
-      const response = await api.post('/orders', orderData);
+      console.log('Creating order with data:', orderData);
+      
+      const params = new URLSearchParams();
+      params.append('userId', orderData.userId);
+      params.append('totalAmount', orderData.totalAmount);
+      params.append('shippingAddress', JSON.stringify(orderData.shippingAddress));
+      params.append('items', JSON.stringify(orderData.items));
+      params.append('paymentMethod', orderData.paymentMethod || 'STRIPE');
+      params.append('paymentIntentId', orderData.paymentIntentId || '');
+      
+      const response = await api.post('/orders', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+      
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('Order creation error:', error);
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to create order'
+        error: error.response?.data?.message || error.response?.data?.error || 'Failed to create order'
       };
     }
   },
 
   async updateOrderStatus(orderId, status) {
     try {
-      const response = await api.put(`/orders/${orderId}/status`, { status });
+      const params = new URLSearchParams();
+      params.append('status', status);
+      
+      const response = await api.put(`/orders/${orderId}/status`, params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+      
       return { success: true, data: response.data };
     } catch (error) {
       return {
@@ -426,6 +450,22 @@ export const orderService = {
         error: error.response?.data?.message || 'Failed to update order status'
       };
     }
+  },
+
+  async getUserOrders(userId) {
+    try {
+      const response = await api.get(`/orders/user/${userId}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch user orders'
+      };
+    }
+  },
+
+  async getAllOrders() {
+    return this.getOrders();
   }
 };
 

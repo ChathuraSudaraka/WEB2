@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../store';
 import { userService } from '../../services/api';
+import { orderService } from '../../services/orderService';
+import { useToast } from '../../contexts/ToastContext';
 import { FiShoppingCart, FiUser, FiTruck, FiLock, FiArrowLeft } from 'react-icons/fi';
 
 const Checkout = () => {
   const { user, isAuthenticated } = useAuth();
   const { cartItems, getCartTotals, clearCart } = useCart();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [fullUserData, setFullUserData] = useState(null);
@@ -96,43 +99,58 @@ const Checkout = () => {
     setLoading(true);
 
     try {
-      // Simulate order processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Prepare shipping address
+      const shippingAddress = `${formData.firstName} ${formData.lastName}, ${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}, ${formData.country}`;
+      
+      // Prepare order items for backend
+      const orderItems = cartItems.map(item => ({
+        productId: item.id,
+        productName: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        color: item.color || 'Default',
+        size: item.size || 'M'
+      }));
 
-      // Create order data
+      // Create order data for backend
       const orderData = {
         userId: user.id,
-        items: cartItems,
-        shipping: formData,
-        totals: {
-          subtotal,
-          shipping,
-          tax,
-          total
-        },
-        orderDate: new Date().toISOString(),
-        status: 'processing'
+        totalAmount: total,
+        shippingAddress: shippingAddress,
+        paymentMethod: 'STRIPE',
+        items: orderItems
       };
 
-      // Save order to localStorage (in real app, send to backend)
-      const existingOrders = JSON.parse(localStorage.getItem('dynex_orders') || '[]');
-      const newOrder = {
-        ...orderData,
-        id: Date.now(),
-        orderNumber: `ORD-${Date.now()}`
-      };
-      existingOrders.unshift(newOrder);
-      localStorage.setItem('dynex_orders', JSON.stringify(existingOrders));
+      toast.success('Processing your order...');
 
-      // Clear cart
-      clearCart();
+      // Call backend API to create order
+      const response = await orderService.createOrder(orderData);
 
-      // Navigate to success page
-      navigate('/payment-success', { state: { order: newOrder } });
+      if (response.success) {
+        // Clear cart on successful order
+        clearCart();
+        
+        toast.success('Order placed successfully!');
+        
+        // Navigate to success page with order details
+        navigate('/payment-success', { 
+          state: { 
+            order: {
+              id: response.data.id,
+              orderNumber: response.data.orderNumber,
+              total: total,
+              items: cartItems,
+              shipping: formData
+            }
+          } 
+        });
+      } else {
+        throw new Error(response.error || 'Failed to create order');
+      }
 
     } catch (error) {
       console.error('Error processing order:', error);
-      alert('Failed to process order. Please try again.');
+      toast.error(error.message || 'Failed to process order. Please try again.');
     } finally {
       setLoading(false);
     }

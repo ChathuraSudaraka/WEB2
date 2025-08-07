@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { orderService } from '../../services/orderService';
+import { orderService } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 const AdminOrders = () => {
@@ -9,7 +9,7 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const orderStatuses = [
     'ALL', 'PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'
@@ -31,89 +31,60 @@ const AdminOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      
-      // Try to fetch orders from API
       const result = await orderService.getAllOrders();
       
-      if (result.success && result.data && Array.isArray(result.data)) {
-        setOrders(result.data);
-        console.log('✅ Orders loaded from API:', result.data.length);
+      if (result.success) {
+        setOrders(result.data || []);
       } else {
-        console.warn('⚠️ API not available or no data, using demo orders');
-        // Use demo data when API is not available
-        setDemoOrders();
+        console.error('Failed to fetch orders:', result.error);
+        showToast('Failed to fetch orders', 'error');
+        // Set mock data for demonstration
+        setOrders([
+          {
+            id: 1,
+            userId: 1,
+            customerName: 'John Doe',
+            customerEmail: 'john@example.com',
+            totalAmount: 159.99,
+            status: 'PENDING',
+            createdAt: new Date().toISOString(),
+            shippingAddress: JSON.stringify({
+              street: '123 Main St',
+              city: 'New York',
+              state: 'NY',
+              zipCode: '10001'
+            }),
+            items: JSON.stringify([
+              { productId: 1, productName: 'Cotton T-Shirt', quantity: 2, price: 29.99 },
+              { productId: 2, productName: 'Jeans', quantity: 1, price: 99.99 }
+            ])
+          },
+          {
+            id: 2,
+            userId: 2,
+            customerName: 'Jane Smith',
+            customerEmail: 'jane@example.com',
+            totalAmount: 89.99,
+            status: 'DELIVERED',
+            createdAt: new Date(Date.now() - 86400000).toISOString(),
+            shippingAddress: JSON.stringify({
+              street: '456 Oak Ave',
+              city: 'Los Angeles',
+              state: 'CA',
+              zipCode: '90210'
+            }),
+            items: JSON.stringify([
+              { productId: 3, productName: 'Hoodie', quantity: 1, price: 89.99 }
+            ])
+          }
+        ]);
       }
     } catch (error) {
-      console.warn('⚠️ Server not available, using demo orders:', error.message);
-      // Use demo data when server is not available
-      setDemoOrders();
+      console.error('Error fetching orders:', error);
+      showToast('Error fetching orders', 'error');
     } finally {
       setLoading(false);
     }
-  };
-
-  const setDemoOrders = () => {
-    const demoOrders = [
-      {
-        id: 1,
-        userId: 1,
-        customerName: 'John Doe',
-        customerEmail: 'john@example.com',
-        totalAmount: 159.99,
-        status: 'PENDING',
-        createdAt: new Date().toISOString(),
-        shippingAddress: JSON.stringify({
-          street: '123 Main St',
-          city: 'New York',
-          state: 'NY',
-          zipCode: '10001'
-        }),
-        items: JSON.stringify([
-          { productId: 1, productName: 'Cotton T-Shirt', quantity: 2, price: 29.99 },
-          { productId: 2, productName: 'Jeans', quantity: 1, price: 99.99 }
-        ])
-      },
-      {
-        id: 2,
-        userId: 2,
-        customerName: 'Jane Smith',
-        customerEmail: 'jane@example.com',
-        totalAmount: 89.99,
-        status: 'DELIVERED',
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        shippingAddress: JSON.stringify({
-          street: '456 Oak Ave',
-          city: 'Los Angeles',
-          state: 'CA',
-          zipCode: '90210'
-        }),
-        items: JSON.stringify([
-          { productId: 3, productName: 'Hoodie', quantity: 1, price: 89.99 }
-        ])
-      },
-      {
-        id: 3,
-        userId: 3,
-        customerName: 'Mike Johnson',
-        customerEmail: 'mike@example.com',
-        totalAmount: 299.97,
-        status: 'PROCESSING',
-        createdAt: new Date(Date.now() - 172800000).toISOString(),
-        shippingAddress: JSON.stringify({
-          street: '789 Pine St',
-          city: 'Chicago',
-          state: 'IL',
-          zipCode: '60601'
-        }),
-        items: JSON.stringify([
-          { productId: 4, productName: 'Winter Jacket', quantity: 1, price: 199.99 },
-          { productId: 5, productName: 'Wool Sweater', quantity: 1, price: 99.98 }
-        ])
-      }
-    ];
-    
-    setOrders(demoOrders);
-    toast.warning('Using demo data - API server not available');
   };
 
   const handleStatusUpdate = async (orderId, newStatus) => {
@@ -122,26 +93,26 @@ const AdminOrders = () => {
       const result = await orderService.updateOrderStatus(orderId, newStatus);
       
       if (result.success) {
-        setOrders((orders || []).map(order => 
+        setOrders(orders.map(order => 
           order.id === orderId ? { ...order, status: newStatus } : order
         ));
-        toast.success('Order status updated successfully');
+        showToast('Order status updated successfully', 'success');
         setIsModalOpen(false);
         setSelectedOrder(null);
       } else {
-        toast.error(result.error || 'Failed to update order status');
+        showToast(result.error || 'Failed to update order status', 'error');
       }
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Error updating order status - server not available');
+      showToast('Error updating order status', 'error');
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  const filteredOrders = Array.isArray(orders) ? orders.filter(order => 
+  const filteredOrders = orders.filter(order => 
     statusFilter === 'ALL' || order.status === statusFilter
-  ) : [];
+  );
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -197,7 +168,7 @@ const AdminOrders = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                <p className="text-2xl font-semibold text-gray-900">{(orders || []).length}</p>
+                <p className="text-2xl font-semibold text-gray-900">{orders.length}</p>
               </div>
             </div>
           </div>
@@ -212,7 +183,7 @@ const AdminOrders = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Pending Orders</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {(orders || []).filter(order => order.status === 'PENDING').length}
+                  {orders.filter(order => order.status === 'PENDING').length}
                 </p>
               </div>
             </div>
@@ -228,7 +199,7 @@ const AdminOrders = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Delivered Orders</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {(orders || []).filter(order => order.status === 'DELIVERED').length}
+                  {orders.filter(order => order.status === 'DELIVERED').length}
                 </p>
               </div>
             </div>
@@ -244,7 +215,7 @@ const AdminOrders = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  ${(orders || []).reduce((sum, order) => sum + parseFloat(order.totalAmount || 0), 0).toFixed(2)}
+                  ${orders.reduce((sum, order) => sum + parseFloat(order.totalAmount || 0), 0).toFixed(2)}
                 </p>
               </div>
             </div>
