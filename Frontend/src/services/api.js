@@ -214,12 +214,36 @@ export const productService = {
 
   async deleteProduct(id) {
     try {
-      await api.delete(`/products/${id}`);
+      console.log('=== DELETING PRODUCT IN API SERVICE ===');
+      console.log('Product ID to delete:', id);
+      console.log('ID type:', typeof id);
+      
+      // Ensure ID is properly formatted
+      const productId = parseInt(id);
+      if (isNaN(productId)) {
+        throw new Error('Invalid product ID: ' + id);
+      }
+      
+      console.log('Parsed product ID:', productId);
+      
+      // Backend expects ID as query parameter, not path parameter
+      console.log('API URL will be:', `/products?id=${productId}`);
+      
+      const response = await api.delete(`/products?id=${productId}`);
+      console.log('Delete response:', response);
+      console.log('Delete response status:', response.status);
+      console.log('Delete response data:', response.data);
+      
       return { success: true };
     } catch (error) {
+      console.error('❌ API Delete error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to delete product'
+        error: error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to delete product'
       };
     }
   }

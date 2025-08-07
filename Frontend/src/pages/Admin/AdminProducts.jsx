@@ -18,6 +18,7 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -63,58 +64,80 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      console.log('=== FETCHING PRODUCTS ===');
+      console.log('API Base URL:', 'http://localhost:8080/WebViva');
       console.log('Fetching products with admin=true...');
-      const response = await productService.getAllProducts({ admin: 'true' }); // Add admin parameter to get all products including inactive
-      console.log('Products response:', response);
       
-      if (response.success) {
+      const response = await productService.getAllProducts({ admin: 'true' });
+      console.log('Raw Products response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Response success:', response?.success);
+      console.log('Response data:', response?.data);
+      console.log('Response data type:', typeof response?.data);
+      
+      if (response && response.success && response.data) {
+        console.log('Processing valid response...');
+        console.log('Raw data length:', response.data.length);
+        
         // Ensure we have a valid array and each product has required properties
-        const validProducts = (response.data || []).map(product => ({
-          id: product.id || 0,
-          name: product.name || 'Unnamed Product',
-          description: product.description || '',
-          sku: product.sku || '',
-          category: product.category || 'Uncategorized',
-          categoryId: product.categoryId || null,
-          price: product.price || 0,
-          discountPrice: product.discountPrice || null,
-          stock: product.stockQuantity || product.stock || 0, // Handle both field names
-          stockQuantity: product.stockQuantity || product.stock || 0, // Keep both for compatibility
-          status: product.isActive ? 'active' : 'inactive',
-          isActive: product.isActive !== false,
-          isFeatured: product.isFeatured || false,
-          imageUrl: product.imageUrl || '/images/placeholder-product.jpg',
-          image: product.imageUrl || '/images/placeholder-product.jpg', // For backward compatibility
-          brand: product.brand || 'DYNEX',
-          // DYNEX clothing specific fields
-          material: product.material || '',
-          color: product.color || '',
-          gender: product.gender || 'UNISEX',
-          season: product.season || 'ALL_SEASON',
-          fitType: product.fitType || '',
-          pattern: product.pattern || '',
-          careInstructions: product.careInstructions || '',
-          weight: product.weight || null,
-          dimensions: product.dimensions || ''
-        }));
+        const validProducts = (Array.isArray(response.data) ? response.data : []).map((product, index) => {
+          console.log(`Processing product ${index + 1}:`, product);
+          return {
+            id: product.id || index + 1,
+            name: product.name || 'Unnamed Product',
+            description: product.description || '',
+            sku: product.sku || `SKU-${product.id || index + 1}`,
+            category: product.category || 'Uncategorized',
+            categoryId: product.categoryId || product.category_id || null,
+            price: parseFloat(product.price) || 0,
+            discountPrice: product.discountPrice ? parseFloat(product.discountPrice) : null,
+            stock: parseInt(product.stockQuantity || product.stock || 0),
+            stockQuantity: parseInt(product.stockQuantity || product.stock || 0),
+            status: product.isActive !== false ? 'active' : 'inactive',
+            isActive: product.isActive !== false,
+            isFeatured: product.isFeatured || false,
+            imageUrl: product.imageUrl || product.image_url || '/images/placeholder-product.jpg',
+            image: product.imageUrl || product.image_url || '/images/placeholder-product.jpg',
+            brand: product.brand || 'DYNEX',
+            // DYNEX clothing specific fields
+            material: product.material || '',
+            color: product.color || '',
+            gender: product.gender || 'UNISEX',
+            season: product.season || 'ALL_SEASON',
+            fitType: product.fitType || product.fit_type || '',
+            pattern: product.pattern || '',
+            careInstructions: product.careInstructions || product.care_instructions || '',
+            weight: product.weight || null,
+            dimensions: product.dimensions || ''
+          };
+        });
+        
+        console.log('Processed products:', validProducts);
         setProducts(validProducts);
-        console.log('Loaded products:', validProducts);
+        console.log(`✅ Successfully loaded ${validProducts.length} products`);
       } else {
-        console.error('Error fetching products:', response.error);
-        // Fallback to mock data if backend fails
-        setProducts([
+        console.warn('⚠️ Invalid response structure:', response);
+        console.log('Falling back to mock data...');
+        
+        // Enhanced fallback data with more realistic products
+        const mockProducts = [
           {
             id: 1,
             name: 'Premium Cotton T-Shirt',
+            sku: 'DYNEX-TSH-001',
             categoryId: 1,
             category: 'T-Shirts',
             price: 29.99,
+            discountPrice: 24.99,
             stock: 45,
             stockQuantity: 45,
             status: 'active',
             isActive: true,
-            image: '/images/placeholder-product.jpg',
-            description: 'High-quality cotton t-shirt',
+            isFeatured: true,
+            imageUrl: '/images/tshirt-premium.jpg',
+            image: '/images/tshirt-premium.jpg',
+            brand: 'DYNEX',
+            description: 'High-quality cotton t-shirt with premium finish',
             material: 'Cotton',
             color: 'White,Black,Navy',
             gender: 'UNISEX'
@@ -122,6 +145,7 @@ const AdminProducts = () => {
           {
             id: 2,
             name: 'Denim Jacket',
+            sku: 'DYNEX-JKT-002',
             categoryId: 5,
             category: 'Jackets',
             price: 89.99,
@@ -129,20 +153,55 @@ const AdminProducts = () => {
             stockQuantity: 12,
             status: 'active',
             isActive: true,
-            image: '/images/placeholder-product.jpg',
-            description: 'Classic denim jacket',
+            isFeatured: false,
+            imageUrl: '/images/denim-jacket.jpg',
+            image: '/images/denim-jacket.jpg',
+            brand: 'DYNEX',
+            description: 'Classic denim jacket with modern cut',
             material: 'Denim',
             color: 'Blue',
             gender: 'UNISEX'
+          },
+          {
+            id: 3,
+            name: 'Casual Hoodie',
+            sku: 'DYNEX-HOD-003',
+            categoryId: 2,
+            category: 'Hoodies',
+            price: 59.99,
+            stock: 8,
+            stockQuantity: 8,
+            status: 'active',
+            isActive: true,
+            isFeatured: true,
+            imageUrl: '/images/hoodie-casual.jpg',
+            image: '/images/hoodie-casual.jpg',
+            brand: 'DYNEX',
+            description: 'Comfortable hoodie perfect for casual wear',
+            material: 'Cotton Blend',
+            color: 'Gray,Black,Red',
+            gender: 'UNISEX'
           }
-        ]);
+        ];
+        
+        setProducts(mockProducts);
+        console.log('✅ Loaded fallback mock products:', mockProducts.length);
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
-      // Fallback to empty array
+      console.error('❌ Error fetching products:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      
+      // Enhanced error fallback
+      console.log('Setting empty products array due to error');
       setProducts([]);
     } finally {
       setLoading(false);
+      console.log('=== PRODUCTS FETCH COMPLETE ===');
     }
   };
 
@@ -315,17 +374,34 @@ const AdminProducts = () => {
 
   const handleDeleteProduct = async () => {
     try {
+      console.log('=== DELETING PRODUCT ===');
+      console.log('Product to delete:', selectedProduct);
+      console.log('Product ID:', selectedProduct.id);
+      console.log('Product ID type:', typeof selectedProduct.id);
+      
       const response = await productService.deleteProduct(selectedProduct.id);
+      console.log('Delete response:', response);
+      
       if (response.success) {
         setProducts(prev => prev.filter(p => p.id !== selectedProduct.id));
         setShowDeleteModal(false);
         setSelectedProduct(null);
         alert('Product deleted successfully!');
+        console.log('✅ Product deleted successfully');
       } else {
+        console.error('❌ Delete failed:', response.error);
         alert('Error deleting product: ' + response.error);
       }
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error('❌ Error deleting product:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
+      });
       alert('Error deleting product. Please try again.');
     }
   };
@@ -386,7 +462,10 @@ const AdminProducts = () => {
                            product.categoryId == filterCategory || 
                            product.category === filterCategory ||
                            (product.category && product.category.id == filterCategory);
-    return matchesSearch && matchesCategory;
+    const matchesStatus = filterStatus === 'all' ||
+                         (filterStatus === 'active' && product.isActive) ||
+                         (filterStatus === 'inactive' && !product.isActive);
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   if (loading) {
@@ -402,16 +481,35 @@ const AdminProducts = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600">Manage your product inventory ({categories.length} categories loaded)</p>
+          <h1 className="text-2xl font-bold text-gray-900">Products Management</h1>
+          <p className="text-gray-600">
+            Manage your product inventory • 
+            <span className="font-medium"> {filteredProducts.length} of {products.length} products</span> • 
+            <span className="font-medium"> {categories.length} categories loaded</span>
+          </p>
         </div>
-        <button 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-          onClick={openAddModal}
-        >
-          <FiPlus className="h-4 w-4" />
-          <span>Add Product</span>
-        </button>
+        <div className="flex space-x-3">
+          <button 
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            onClick={() => {
+              console.log('=== REFRESHING DATA ===');
+              fetchCategories().then(() => {
+                fetchProducts();
+              });
+            }}
+            title="Refresh data from server"
+          >
+            <FiPackage className="h-4 w-4" />
+            <span>Refresh</span>
+          </button>
+          <button 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            onClick={openAddModal}
+          >
+            <FiPlus className="h-4 w-4" />
+            <span>Add Product</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -442,10 +540,27 @@ const AdminProducts = () => {
                 </option>
               ))}
             </select>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
+            <select
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+            {/* <button 
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+              onClick={() => {
+                setFilterCategory('all');
+                setFilterStatus('all');
+                setSearchTerm('');
+              }}
+              title="Clear all filters"
+            >
               <FiFilter className="h-4 w-4" />
-              <span>Filter</span>
-            </button>
+              <span>Clear</span>
+            </button> */}
           </div>
         </div>
       </div>
@@ -482,7 +597,19 @@ const AdminProducts = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-12 w-12">
-                        <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center">
+                        {product.imageUrl && product.imageUrl !== '/images/placeholder-product.jpg' ? (
+                          <img 
+                            className="h-12 w-12 rounded-lg object-cover" 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center" style={{display: product.imageUrl && product.imageUrl !== '/images/placeholder-product.jpg' ? 'none' : 'flex'}}>
                           <FiPackage className="h-6 w-6 text-gray-400" />
                         </div>
                       </div>
@@ -491,19 +618,36 @@ const AdminProducts = () => {
                           {product.name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          ID: #{product.id}
+                          ID: #{product.id} • Brand: {product.brand || 'DYNEX'}
                         </div>
+                        {product.material && (
+                          <div className="text-xs text-gray-400">
+                            Material: {product.material}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {getCategoryName(product.categoryId) || product.category?.name || product.category || 'N/A'}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {getCategoryName(product.categoryId) || product.category?.name || product.category || 'N/A'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${product.price}
+                    <div className="flex flex-col">
+                      <span className="font-medium">${product.price}</span>
+                      {product.discountPrice && (
+                        <span className="text-xs text-green-600">
+                          Discount: ${product.discountPrice}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {product.stockQuantity || product.stock || 0} units
+                    <div className="flex items-center">
+                      <span className="font-medium">{product.stockQuantity || product.stock || 0}</span>
+                      <span className="text-gray-400 ml-1">units</span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(product.status, product.stockQuantity || product.stock, product.isActive)}
@@ -511,20 +655,24 @@ const AdminProducts = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <button 
-                        className="text-blue-600 hover:text-blue-900 p-1"
+                        className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
                         title="View Product"
+                        onClick={() => {
+                          console.log('Product details:', product);
+                          alert('Product Details:\n' + JSON.stringify(product, null, 2));
+                        }}
                       >
                         <FiEye className="h-4 w-4" />
                       </button>
                       <button 
-                        className="text-green-600 hover:text-green-900 p-1"
+                        className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
                         title="Edit Product"
                         onClick={() => openEditModal(product)}
                       >
                         <FiEdit className="h-4 w-4" />
                       </button>
                       <button 
-                        className="text-red-600 hover:text-red-900 p-1"
+                        className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
                         title="Delete Product"
                         onClick={() => openDeleteModal(product)}
                       >
@@ -543,7 +691,7 @@ const AdminProducts = () => {
             <FiPackage className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No products found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || filterCategory !== 'all' 
+              {searchTerm || filterCategory !== 'all' || filterStatus !== 'all'
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating a new product.'
               }
@@ -564,7 +712,7 @@ const AdminProducts = () => {
       {/* Add Product Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add New Product</h3>
               <button
@@ -576,114 +724,308 @@ const AdminProducts = () => {
             </div>
             
             <form onSubmit={handleAddProduct} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              {/* Basic Product Information */}
+              <div className="border-b border-gray-200 pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Basic Information</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      SKU
+                    </label>
+                    <input
+                      type="text"
+                      name="sku"
+                      value={formData.sku}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., DYNEX-TSH-001"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price *
+                    Description
                   </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
+                  <textarea
+                    name="description"
+                    value={formData.description}
                     onChange={handleInputChange}
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    required
+                    rows={3}
+                    placeholder="Enter product description..."
                   />
                 </div>
                 
-                <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Brand
+                    </label>
+                    <input
+                      type="text"
+                      name="brand"
+                      value={formData.brand}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <select
+                      name="categoryId"
+                      value={formData.categoryId}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing & Inventory */}
+              <div className="border-b border-gray-200 pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Pricing & Inventory</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price *
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Discount Price
+                    </label>
+                    <input
+                      type="number"
+                      name="discountPrice"
+                      value={formData.discountPrice}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      name="stock"
+                      value={formData.stock}
+                      onChange={handleInputChange}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Clothing Specific Information */}
+              <div className="border-b border-gray-200 pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Clothing Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Material
+                    </label>
+                    <input
+                      type="text"
+                      name="material"
+                      value={formData.material}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., Cotton, Denim, Polyester"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Color
+                    </label>
+                    <input
+                      type="text"
+                      name="color"
+                      value={formData.color}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., Red, Blue, White (comma separated)"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender
+                    </label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="UNISEX">Unisex</option>
+                      <option value="MEN">Men</option>
+                      <option value="WOMEN">Women</option>
+                      <option value="KIDS">Kids</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Season
+                    </label>
+                    <select
+                      name="season"
+                      value={formData.season}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="ALL_SEASON">All Season</option>
+                      <option value="SPRING">Spring</option>
+                      <option value="SUMMER">Summer</option>
+                      <option value="FALL">Fall</option>
+                      <option value="WINTER">Winter</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fit Type
+                    </label>
+                    <input
+                      type="text"
+                      name="fitType"
+                      value={formData.fitType}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., Slim, Regular, Loose"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Stock *
+                    Pattern
                   </label>
                   <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
+                    type="text"
+                    name="pattern"
+                    value={formData.pattern}
                     onChange={handleInputChange}
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    required
+                    placeholder="e.g., Solid, Striped, Checkered"
+                  />
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Care Instructions
+                  </label>
+                  <textarea
+                    name="careInstructions"
+                    value={formData.careInstructions}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    rows={2}
+                    placeholder="e.g., Machine wash cold, tumble dry low..."
                   />
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <select
-                  name="categoryId"
-                  value={formData.categoryId}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+
+              {/* Media & Status */}
+              <div className="pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Media & Status</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Image URL
+                  </label>
+                  <input
+                    type="url"
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="isActive"
+                      value={formData.isActive}
+                      onChange={(e) => setFormData(prev => ({...prev, isActive: e.target.value === 'true'}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Featured Product
+                    </label>
+                    <select
+                      name="isFeatured"
+                      value={formData.isFeatured}
+                      onChange={(e) => setFormData(prev => ({...prev, isFeatured: e.target.value === 'true'}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="false">Regular Product</option>
+                      <option value="true">Featured Product</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image URL
-                </label>
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -707,7 +1049,7 @@ const AdminProducts = () => {
       {/* Edit Product Modal */}
       {showEditModal && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
               <button
@@ -719,114 +1061,308 @@ const AdminProducts = () => {
             </div>
             
             <form onSubmit={handleEditProduct} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              {/* Basic Product Information */}
+              <div className="border-b border-gray-200 pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Basic Information</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      SKU
+                    </label>
+                    <input
+                      type="text"
+                      name="sku"
+                      value={formData.sku}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., DYNEX-TSH-001"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price *
+                    Description
                   </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
+                  <textarea
+                    name="description"
+                    value={formData.description}
                     onChange={handleInputChange}
-                    step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    required
+                    rows={3}
+                    placeholder="Enter product description..."
                   />
                 </div>
                 
-                <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Brand
+                    </label>
+                    <input
+                      type="text"
+                      name="brand"
+                      value={formData.brand}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <select
+                      name="categoryId"
+                      value={formData.categoryId}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing & Inventory */}
+              <div className="border-b border-gray-200 pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Pricing & Inventory</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price *
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Discount Price
+                    </label>
+                    <input
+                      type="number"
+                      name="discountPrice"
+                      value={formData.discountPrice}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Stock Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      name="stock"
+                      value={formData.stock}
+                      onChange={handleInputChange}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Clothing Specific Information */}
+              <div className="border-b border-gray-200 pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Clothing Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Material
+                    </label>
+                    <input
+                      type="text"
+                      name="material"
+                      value={formData.material}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., Cotton, Denim, Polyester"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Color
+                    </label>
+                    <input
+                      type="text"
+                      name="color"
+                      value={formData.color}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., Red, Blue, White (comma separated)"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender
+                    </label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="UNISEX">Unisex</option>
+                      <option value="MEN">Men</option>
+                      <option value="WOMEN">Women</option>
+                      <option value="KIDS">Kids</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Season
+                    </label>
+                    <select
+                      name="season"
+                      value={formData.season}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="ALL_SEASON">All Season</option>
+                      <option value="SPRING">Spring</option>
+                      <option value="SUMMER">Summer</option>
+                      <option value="FALL">Fall</option>
+                      <option value="WINTER">Winter</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fit Type
+                    </label>
+                    <input
+                      type="text"
+                      name="fitType"
+                      value={formData.fitType}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="e.g., Slim, Regular, Loose"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Stock *
+                    Pattern
                   </label>
                   <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
+                    type="text"
+                    name="pattern"
+                    value={formData.pattern}
                     onChange={handleInputChange}
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    required
+                    placeholder="e.g., Solid, Striped, Checkered"
+                  />
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Care Instructions
+                  </label>
+                  <textarea
+                    name="careInstructions"
+                    value={formData.careInstructions}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    rows={2}
+                    placeholder="e.g., Machine wash cold, tumble dry low..."
                   />
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <select
-                  name="categoryId"
-                  value={formData.categoryId}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+
+              {/* Media & Status */}
+              <div className="pb-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Media & Status</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Image URL
+                  </label>
+                  <input
+                    type="url"
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="isActive"
+                      value={formData.isActive}
+                      onChange={(e) => setFormData(prev => ({...prev, isActive: e.target.value === 'true'}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Featured Product
+                    </label>
+                    <select
+                      name="isFeatured"
+                      value={formData.isFeatured}
+                      onChange={(e) => setFormData(prev => ({...prev, isFeatured: e.target.value === 'true'}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    >
+                      <option value="false">Regular Product</option>
+                      <option value="true">Featured Product</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image URL
-                </label>
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
