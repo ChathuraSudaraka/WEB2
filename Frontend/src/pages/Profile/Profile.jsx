@@ -30,7 +30,10 @@ const Profile = () => {
   const fetchUserProfile = async () => {
     setIsLoading(true);
     try {
+      console.log('Fetching user profile...');
       const result = await userService.getUserProfile();
+      console.log('User profile result:', result);
+      
       if (result.success) {
         setProfileData({
           firstName: result.data.firstName || '',
@@ -43,9 +46,11 @@ const Profile = () => {
           country: result.data.country || ''
         });
       } else {
-        toast.error('Failed to load profile data');
+        console.error('Failed to load profile data:', result.error);
+        toast.error(result.error || 'Failed to load profile data');
       }
     } catch (error) {
+      console.error('Error loading profile:', error);
       toast.error('Error loading profile');
     } finally {
       setIsLoading(false);

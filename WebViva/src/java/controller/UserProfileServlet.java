@@ -20,6 +20,10 @@ public class UserProfileServlet extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        
         PrintWriter out = response.getWriter();
         
         try {
@@ -57,10 +61,18 @@ public class UserProfileServlet extends HttpServlet {
                 return;
             }
             
+            System.out.println("UserProfileServlet - Fetching user data for userId: " + userId);
+            
             // Fetch user data from database
             Session session = HibernateUtil.getSessionFactory().openSession();
             try {
                 User user = (User) session.get(User.class, userId);
+                
+                System.out.println("UserProfileServlet - User found: " + (user != null));
+                if (user != null) {
+                    System.out.println("UserProfileServlet - User firstName: " + user.getFirstName());
+                    System.out.println("UserProfileServlet - User email: " + user.getEmail());
+                }
                 
                 if (user == null) {
                     response.setStatus(404);
@@ -103,6 +115,10 @@ public class UserProfileServlet extends HttpServlet {
             throws ServletException, IOException {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        
         PrintWriter out = response.getWriter();
         
         try {
@@ -237,5 +253,13 @@ public class UserProfileServlet extends HttpServlet {
         } catch (Exception e) {
             return null;
         }
+    }
+    
+    @Override
+    protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, PUT, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        response.setStatus(HttpServletResponse.SC_OK);
     }
 }

@@ -410,7 +410,13 @@ export const userService = {
   async getUserProfile() {
     try {
       const response = await api.get('/user-profile');
-      return { success: true, data: response.data };
+      // Backend already returns { success: true, data: {...} }
+      // So we should return the response data directly
+      if (response.data.success) {
+        return { success: true, data: response.data.data };
+      } else {
+        return { success: false, error: response.data.message || 'Failed to fetch user profile' };
+      }
     } catch (error) {
       return {
         success: false,
@@ -427,7 +433,12 @@ export const userService = {
         },
       });
       
-      return { success: true, data: response.data };
+      // Backend returns { success: true/false, message?: string }
+      if (response.data.success) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.data.message || 'Failed to update profile' };
+      }
     } catch (error) {
       return {
         success: false,
