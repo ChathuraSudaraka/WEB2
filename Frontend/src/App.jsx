@@ -27,10 +27,11 @@ import BlogPost from "./pages/BlogPost/BlogPost";
 import Profile from "./pages/Profile/Profile";
 import Orders from "./pages/Orders/Orders";
 import Checkout from "./pages/Checkout/Checkout";
-import AdminDashboard from "./pages/Admin/Dashboard/AdminDashboard";
-import AdminProducts from "./pages/Admin/Products/AdminProducts";
-import AdminOrders from "./pages/Admin/Orders/AdminOrders";
-import AdminSettings from "./pages/Admin/Settings/AdminSettings";
+import AdminLayout from "./components/Admin/AdminLayout";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminProducts from "./pages/Admin/AdminProducts";
+import AdminOrders from "./pages/Admin/AdminOrders";
+import AdminSettings from "./pages/Admin/AdminSettings";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import PaymentSuccess from "./pages/PaymentSuccess/PaymentSuccess";
 import ProductInfo from "./pages/ProductDetails/ProductDetails";
@@ -40,8 +41,9 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const hideNavbarRoutes = ["/login", "/signup"];
   const hideFooterRoutes = ["/login", "/signup", "/"];
-  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
-  const shouldHideFooter = hideFooterRoutes.includes(location.pathname);
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname) || isAdminRoute;
+  const shouldHideFooter = hideFooterRoutes.includes(location.pathname) || isAdminRoute;
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,39 +100,20 @@ function App() {
               }
             />
 
-            {/* Admin Routes */}
+            {/* Admin Routes with AdminLayout */}
             <Route
-              path="/admin/dashboard"
+              path="/admin"
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <AdminDashboard />
+                  <AdminLayout />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/admin/products"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminProducts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/orders"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminOrders />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/settings"
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminSettings />
-                </ProtectedRoute>
-              }
-            />
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="products" element={<AdminProducts />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
 
             {/* Redirect unknown routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

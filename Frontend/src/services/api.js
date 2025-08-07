@@ -445,6 +445,31 @@ export const userService = {
         error: error.response?.data?.error || error.response?.data?.message || 'Failed to update profile'
       };
     }
+  },
+
+  async updatePassword(passwordData) {
+    try {
+      const params = new URLSearchParams();
+      params.append('currentPassword', passwordData.currentPassword);
+      params.append('newPassword', passwordData.newPassword);
+      
+      const response = await api.post('/update-password', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+      
+      if (response.data.success) {
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.data.message || 'Failed to update password' };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.response?.data?.message || 'Failed to update password'
+      };
+    }
   }
 };
 
