@@ -119,7 +119,7 @@ const Navbar = () => {
                         {isAdmin() && (
                           <>
                             <Link
-                              to="/admin/dashboard"
+                              to="/admin"
                               className="flex items-center px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-200"
                               onClick={closeMenus}
                             >
@@ -154,15 +154,19 @@ const Navbar = () => {
                           </>
                         )}
 
-                        {/* Regular User Links */}
-                        <Link
-                          to="/profile"
-                          className="flex items-center px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-200"
-                          onClick={closeMenus}
-                        >
-                          <User className="mr-3" size={14} strokeWidth={1.5} />
-                          My Profile
-                        </Link>
+                        {/* Regular User Links - Hide only Profile for Admins */}
+                        {!isAdmin() && (
+                          <Link
+                            to="/profile"
+                            className="flex items-center px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-200"
+                            onClick={closeMenus}
+                          >
+                            <User className="mr-3" size={14} strokeWidth={1.5} />
+                            My Profile
+                          </Link>
+                        )}
+                        
+                        {/* Order History - Show for all users */}
                         <Link
                           to="/orders"
                           className="flex items-center px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-200"
@@ -291,15 +295,19 @@ const Navbar = () => {
                       </>
                     )}
 
-                    {/* Regular User Links for Mobile */}
-                    <Link
-                      to="/profile"
-                      className="flex items-center px-3 py-2 text-white/70 hover:text-white hover:bg-white/5 rounded-md transition-colors"
-                      onClick={closeMenus}
-                    >
-                      <User className="mr-2" size={14} strokeWidth={1.5} />
-                      My Profile
-                    </Link>
+                    {/* Regular User Links for Mobile - Hide only Profile for Admins */}
+                    {!isAdmin() && (
+                      <Link
+                        to="/profile"
+                        className="flex items-center px-3 py-2 text-white/70 hover:text-white hover:bg-white/5 rounded-md transition-colors"
+                        onClick={closeMenus}
+                      >
+                        <User className="mr-2" size={14} strokeWidth={1.5} />
+                        My Profile
+                      </Link>
+                    )}
+                    
+                    {/* Order History - Show for all users */}
                     <Link
                       to="/orders"
                       className="flex items-center px-3 py-2 text-white/70 hover:text-white hover:bg-white/5 rounded-md transition-colors"
