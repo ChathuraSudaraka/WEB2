@@ -25,6 +25,8 @@
 
         <!-- List your annotated classes here -->
         <mapping class="model.User"/>
+        <mapping class="model.Product"/>
+        <mapping class="model.Category"/>
 
     </session-factory>
 </hibernate-configuration>
