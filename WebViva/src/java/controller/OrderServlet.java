@@ -21,6 +21,13 @@ import org.hibernate.Query;
 public class OrderServlet extends javax.servlet.http.HttpServlet {
     private static final long serialVersionUID = 1L;
 
+    // PayHere configuration (adjust as needed or load from env/config)
+    private static final String PAYHERE_MERCHANT_ID = "1225567";
+    private static final String PAYHERE_MERCHANT_SECRET = "MjY5NjQwNjk4OTM0MzI0NDQ1MzQ4MzU0NDAzNTMyNzIwMDMwOTA=";
+    private static final String PAYHERE_NOTIFY_URL = "http://localhost:8080/WebViva/VerifyPayments";
+    private static final String PAYHERE_RETURN_URL = "http://localhost:3000/payment-success";
+    private static final String PAYHERE_CANCEL_URL = "http://localhost:3000/checkout";
+
     @Override
     protected void doGet(javax.servlet.http.HttpServletRequest request, 
                         javax.servlet.http.HttpServletResponse response) 
@@ -366,17 +373,58 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                     parseAndInsertOrderItems(itemsJson, orderId, session);
                 }
                 
+                // Build PayHere payment request payload
+                String orderRef = "#000" + (orderId != null ? orderId : "0");
+                String currency = "LKR";
+                String formattedAmount = new java.text.DecimalFormat("0.00").format(totalAmount);
+                String merchantSecretMD5 = md5(PAYHERE_MERCHANT_SECRET);
+                String payHereHash = md5(PAYHERE_MERCHANT_ID + orderRef + formattedAmount + currency + merchantSecretMD5);
+
+                // Try to get basic user details for PayHere form (optional)
+                String firstNamePH = "";
+                String lastNamePH = "";
+                String emailPH = "";
+                try {
+                    org.hibernate.Query uQuery = session.createSQLQuery("SELECT first_name, last_name, email FROM users WHERE id = ?");
+                    uQuery.setParameter(0, userId);
+                    Object[] uRow = (Object[]) uQuery.uniqueResult();
+                    if (uRow != null) {
+                        firstNamePH = uRow[0] != null ? uRow[0].toString() : "";
+                        lastNamePH = uRow[1] != null ? uRow[1].toString() : "";
+                        emailPH = uRow[2] != null ? uRow[2].toString() : "";
+                    }
+                } catch (Exception ignore) { }
+
+                // Commit transaction after all inserts
                 transaction.commit();
-                
-                // Return created order
+
+                // Return created order with PayHere info
                 StringBuilder response = new StringBuilder();
                 response.append("{\"success\": true, \"data\": {");
                 response.append("\"id\": ").append(orderId).append(",");
                 response.append("\"orderNumber\": \"").append(orderNumber).append("\",");
                 response.append("\"status\": \"PENDING\",");
-                response.append("\"message\": \"Order created successfully\"");
+                response.append("\"message\": \"Order created successfully\",");
+                // Minimal items label for PayHere
+                String itemsLabel = "Order %23" + (orderId != null ? orderId.toString() : "0");
+                // Build payhere JSON object inline
+                response.append("\"payhere\": {");
+                response.append("\"sandbox\": true,");
+                response.append("\"merchant_id\": \"").append(PAYHERE_MERCHANT_ID).append("\",");
+                response.append("\"return_url\": \"").append(escapeJson(PAYHERE_RETURN_URL)).append("\",");
+                response.append("\"cancel_url\": \"").append(escapeJson(PAYHERE_CANCEL_URL)).append("\",");
+                response.append("\"notify_url\": \"").append(escapeJson(PAYHERE_NOTIFY_URL)).append("\",");
+                response.append("\"order_id\": \"").append(escapeJson(orderRef)).append("\",");
+                response.append("\"items\": \"").append(itemsLabel).append("\",");
+                response.append("\"amount\": \"").append(formattedAmount).append("\",");
+                response.append("\"currency\": \"").append(currency).append("\",");
+                response.append("\"hash\": \"").append(payHereHash).append("\",");
+                response.append("\"first_name\": \"").append(escapeJson(firstNamePH)).append("\",");
+                response.append("\"last_name\": \"").append(escapeJson(lastNamePH)).append("\",");
+                response.append("\"email\": \"").append(escapeJson(emailPH)).append("\"");
+                response.append("}");
                 response.append("}}");
-                
+
                 out.print(response.toString());
             } else {
                 if (transaction != null) transaction.rollback();
@@ -596,6 +644,20 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
     private String escapeJson(String str) {
         if (str == null) return "";
         return str.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+    }
+
+    private static String md5(String input) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString().toUpperCase();
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private void sendErrorResponse(PrintWriter out, String message) {

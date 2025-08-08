@@ -20,6 +20,16 @@
         <servlet-name>OrderServlet</servlet-name>
         <url-pattern>/orders/*</url-pattern>
     </servlet-mapping>
+
+    <!-- VerifyPayments Servlet Mapping -->
+    <servlet>
+        <servlet-name>VerifyPayments</servlet-name>
+        <servlet-class>controller.VerifyPayments</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>VerifyPayments</servlet-name>
+        <url-pattern>/VerifyPayments</url-pattern>
+    </servlet-mapping>
     
     <session-config>
         <session-timeout>

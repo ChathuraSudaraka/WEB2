@@ -117,7 +117,7 @@ const Checkout = () => {
         userId: user.id,
         totalAmount: total,
         shippingAddress: shippingAddress,
-        paymentMethod: 'STRIPE',
+        paymentMethod: 'PAYHERE',
         items: orderItems
       };
 
@@ -127,22 +127,24 @@ const Checkout = () => {
       const response = await orderService.createOrder(orderData);
 
       if (response.success) {
-        // Clear cart on successful order
-        clearCart();
-        
+        // If PayHere payload is present, redirect to PayHere checkout
+        if (response.data && response.data.payhere) {
+          submitPayHereForm(response.data.payhere, formData);
+          return; // Stop here; we'll leave the site to PayHere
+        }
+
+        // Fallback: no payhere data returned, go to success (dev-only)
         toast.success('Order placed successfully!');
-        
-        // Navigate to success page with order details
-        navigate('/payment-success', { 
-          state: { 
+        navigate('/payment-success', {
+          state: {
             order: {
               id: response.data.id,
               orderNumber: response.data.orderNumber,
               total: total,
               items: cartItems,
-              shipping: formData
-            }
-          } 
+              shipping: formData,
+            },
+          },
         });
       } else {
         throw new Error(response.error || 'Failed to create order');
@@ -153,6 +155,51 @@ const Checkout = () => {
       toast.error(error.message || 'Failed to process order. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Submit a hidden form to PayHere sandbox checkout
+  const submitPayHereForm = (payhere, shipping) => {
+    try {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = payhere.sandbox ? 'https://sandbox.payhere.lk/pay/checkout' : 'https://www.payhere.lk/pay/checkout';
+      form.style.display = 'none';
+
+      const addField = (name, value) => {
+        if (value === undefined || value === null) return;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = String(value);
+        form.appendChild(input);
+      };
+
+      // Required fields
+      addField('merchant_id', payhere.merchant_id);
+      addField('return_url', payhere.return_url);
+      addField('cancel_url', payhere.cancel_url);
+      addField('notify_url', payhere.notify_url);
+      addField('order_id', payhere.order_id);
+      addField('items', payhere.items);
+      addField('amount', payhere.amount);
+      addField('currency', payhere.currency);
+      addField('hash', payhere.hash);
+
+      // Customer fields (fallback to shipping form)
+      addField('first_name', payhere.first_name || shipping.firstName);
+      addField('last_name', payhere.last_name || shipping.lastName);
+      addField('email', payhere.email || shipping.email);
+      addField('phone', payhere.phone || shipping.phone);
+      addField('address', payhere.address || shipping.address);
+      addField('city', payhere.city || shipping.city);
+      addField('country', payhere.country || (shipping.country || 'Sri Lanka'));
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      console.error('Failed to submit PayHere form', err);
+      toast.error('Payment gateway error. Please try again.');
     }
   };
 
