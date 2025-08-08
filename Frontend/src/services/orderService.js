@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/WebViva';
+const API_BASE_URL = '/WebViva';
 
 export const orderService = {
   // Create a new order

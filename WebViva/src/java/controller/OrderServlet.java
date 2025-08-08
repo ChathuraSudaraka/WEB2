@@ -11,7 +11,6 @@ import java.sql.SQLException;
  * OrderServlet - Complete REST API for order management
  * Handles CRUD operations for orders and order items
  */
-@javax.servlet.annotation.WebServlet("/orders")
 public class OrderServlet extends javax.servlet.http.HttpServlet {
     private static final long serialVersionUID = 1L;
 
@@ -144,7 +143,13 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                 jsonBuilder.append("\"orderNumber\": \"").append(row[2] != null ? row[2] : "").append("\",");
                 jsonBuilder.append("\"status\": \"").append(row[3] != null ? row[3] : "PENDING").append("\",");
                 jsonBuilder.append("\"totalAmount\": ").append(row[4] != null ? row[4] : "0").append(",");
-                jsonBuilder.append("\"shippingAddress\": \"").append(escapeJson(row[5] != null ? row[5].toString() : "")).append("\",");
+                // Format shipping address as JSON string for frontend parsing
+                String shippingAddr = row[5] != null ? row[5].toString() : "";
+                if (!shippingAddr.isEmpty() && !shippingAddr.startsWith("{")) {
+                    // If it's a plain address, convert to JSON format
+                    shippingAddr = "{\"street\":\"" + escapeJson(shippingAddr) + "\",\"city\":\"\",\"state\":\"\",\"zipCode\":\"\"}";
+                }
+                jsonBuilder.append("\"shippingAddress\": \"").append(escapeJson(shippingAddr)).append("\",");
                 jsonBuilder.append("\"paymentMethod\": \"").append(row[6] != null ? row[6] : "STRIPE").append("\",");
                 jsonBuilder.append("\"createdAt\": \"").append(row[7] != null ? row[7] : "").append("\",");
                 
@@ -160,8 +165,8 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                 }
                 jsonBuilder.append("\"customerEmail\": \"").append(escapeJson(email != null ? email : "No email")).append("\",");
                 
-                // Get order items
-                jsonBuilder.append("\"items\": ").append(getOrderItemsJson(orderId, session));
+                // Get order items as JSON string for frontend parsing
+                jsonBuilder.append("\"items\": \"").append(escapeJson(getOrderItemsJson(orderId, session))).append("\"");
                 
                 jsonBuilder.append("}");
             }
@@ -205,10 +210,17 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                 jsonBuilder.append("\"orderNumber\": \"").append(row[2] != null ? row[2] : "").append("\",");
                 jsonBuilder.append("\"status\": \"").append(row[3] != null ? row[3] : "PENDING").append("\",");
                 jsonBuilder.append("\"totalAmount\": ").append(row[4] != null ? row[4] : "0").append(",");
-                jsonBuilder.append("\"shippingAddress\": \"").append(escapeJson(row[5] != null ? row[5].toString() : "")).append("\",");
+                
+                // Format shipping address as JSON string for frontend parsing
+                String shippingAddr = row[5] != null ? row[5].toString() : "";
+                if (!shippingAddr.isEmpty() && !shippingAddr.startsWith("{")) {
+                    // If it's a plain address, convert to JSON format
+                    shippingAddr = "{\"street\":\"" + escapeJson(shippingAddr) + "\",\"city\":\"\",\"state\":\"\",\"zipCode\":\"\"}";
+                }
+                jsonBuilder.append("\"shippingAddress\": \"").append(escapeJson(shippingAddr)).append("\",");
                 jsonBuilder.append("\"paymentMethod\": \"").append(row[6] != null ? row[6] : "STRIPE").append("\",");
                 jsonBuilder.append("\"createdAt\": \"").append(row[7] != null ? row[7] : "").append("\",");
-                jsonBuilder.append("\"items\": ").append(getOrderItemsJson(orderId, session));
+                jsonBuilder.append("\"items\": \"").append(escapeJson(getOrderItemsJson(orderId, session))).append("\"");
                 jsonBuilder.append("}");
             }
             
@@ -242,20 +254,27 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                 StringBuilder jsonBuilder = new StringBuilder();
                 jsonBuilder.append("{\"success\": true, \"data\": {");
                 
-                Long id = result[0] != null ? ((Number) result[0]).longValue() : null;
-                Long userId = result[1] != null ? ((Number) result[1]).longValue() : null;
-                
-                jsonBuilder.append("\"id\": ").append(id).append(",");
-                jsonBuilder.append("\"userId\": ").append(userId).append(",");
-                jsonBuilder.append("\"orderNumber\": \"").append(result[2] != null ? result[2] : "").append("\",");
-                jsonBuilder.append("\"status\": \"").append(result[3] != null ? result[3] : "PENDING").append("\",");
                 jsonBuilder.append("\"totalAmount\": ").append(result[4] != null ? result[4] : "0").append(",");
-                jsonBuilder.append("\"shippingAddress\": \"").append(escapeJson(result[5] != null ? result[5].toString() : "")).append("\",");
+                
+                // Format shipping address as JSON string for frontend parsing
+                String shippingAddr = result[5] != null ? result[5].toString() : "";
+                if (!shippingAddr.isEmpty() && !shippingAddr.startsWith("{")) {
+                    // If it's a plain address, convert to JSON format
+                    shippingAddr = "{\"street\":\"" + escapeJson(shippingAddr) + "\",\"city\":\"\",\"state\":\"\",\"zipCode\":\"\"}";
+                }
+                jsonBuilder.append("\"shippingAddress\": \"").append(escapeJson(shippingAddr)).append("\",");
                 jsonBuilder.append("\"paymentMethod\": \"").append(result[6] != null ? result[6] : "STRIPE").append("\",");
                 jsonBuilder.append("\"createdAt\": \"").append(result[7] != null ? result[7] : "").append("\",");
                 
                 String firstName = result[8] != null ? (String) result[8] : null;
                 String lastName = result[9] != null ? (String) result[9] : null;
+                if (firstName != null && lastName != null) {
+                    jsonBuilder.append("\"customerName\": \"").append(escapeJson(firstName + " " + lastName)).append("\",");
+                } else {
+                    jsonBuilder.append("\"customerName\": \"Unknown Customer\",");
+                }
+                jsonBuilder.append("\"customerEmail\": \"").append(escapeJson(result[10] != null ? result[10].toString() : "")).append("\",");
+                jsonBuilder.append("\"items\": \"").append(escapeJson(getOrderItemsJson(id, session))).append("\"");
                 if (firstName != null && lastName != null) {
                     jsonBuilder.append("\"customerName\": \"").append(escapeJson(firstName + " " + lastName)).append("\",");
                 } else {
@@ -366,9 +385,35 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
         try {
             transaction = session.beginTransaction();
             
-            String newStatus = request.getParameter("status");
+            // For PUT requests, we need to manually parse the form data from the body
+            String newStatus = null;
             
+            // Try to get parameter normally first (works for POST)
+            newStatus = request.getParameter("status");
+            
+            // If not found, read from request body (for PUT)
             if (newStatus == null) {
+                java.io.BufferedReader reader = request.getReader();
+                StringBuilder bodyBuilder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    bodyBuilder.append(line);
+                }
+                String body = bodyBuilder.toString();
+                
+                // Parse form-encoded data: status=CONFIRMED
+                if (body.contains("status=")) {
+                    String[] parts = body.split("&");
+                    for (String part : parts) {
+                        if (part.startsWith("status=")) {
+                            newStatus = java.net.URLDecoder.decode(part.substring(7), "UTF-8");
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (newStatus == null || newStatus.trim().isEmpty()) {
                 sendErrorResponse(out, "Status parameter is required");
                 return;
             }
