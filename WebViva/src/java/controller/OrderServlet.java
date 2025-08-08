@@ -22,8 +22,8 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
     private static final long serialVersionUID = 1L;
 
     // PayHere configuration (adjust as needed or load from env/config)
-    private static final String PAYHERE_MERCHANT_ID = "1225567";
-    private static final String PAYHERE_MERCHANT_SECRET = "MjY5NjQwNjk4OTM0MzI0NDQ1MzQ4MzU0NDAzNTMyNzIwMDMwOTA=";
+    private static final String PAYHERE_MERCHANT_ID = "1231359";
+    private static final String PAYHERE_MERCHANT_SECRET = "MTA3NTMwODIzNDYyNjIyMjI0MjIxMzc5NjUyOTI5NTkyODAwMA==";
     private static final String PAYHERE_NOTIFY_URL = "http://localhost:8080/WebViva/VerifyPayments";
     private static final String PAYHERE_RETURN_URL = "http://localhost:3000/payment-success";
     private static final String PAYHERE_CANCEL_URL = "http://localhost:3000/checkout";

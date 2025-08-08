@@ -47,12 +47,12 @@ const Checkout = () => {
     }
   }, [cartItems, isAuthenticated, navigate]);
 
-  // Fetch full user data when user is authenticated
+  // Fetch full user data when user is authenticated (prefill from DB)
   useEffect(() => {
     const fetchUserData = async () => {
       if (isAuthenticated && user) {
         try {
-          const response = await userService.getCurrentUser();
+          const response = await userService.getUserProfile();
           if (response.success) {
             console.log('Full user data fetched:', response.data); // Debug log
             setFullUserData(response.data);
