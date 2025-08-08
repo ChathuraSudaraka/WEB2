@@ -6,6 +6,13 @@ import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.util.List;
 import java.sql.SQLException;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.Query;
 
 /**
  * OrderServlet - Complete REST API for order management
@@ -254,6 +261,14 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                 StringBuilder jsonBuilder = new StringBuilder();
                 jsonBuilder.append("{\"success\": true, \"data\": {");
                 
+                // Safe casting for database values
+                Long orderIdFromResult = result[0] != null ? ((Number) result[0]).longValue() : orderId;
+                Long userId = result[1] != null ? ((Number) result[1]).longValue() : null;
+                
+                jsonBuilder.append("\"id\": ").append(orderIdFromResult).append(",");
+                jsonBuilder.append("\"userId\": ").append(userId).append(",");
+                jsonBuilder.append("\"orderNumber\": \"").append(result[2] != null ? result[2] : "").append("\",");
+                jsonBuilder.append("\"status\": \"").append(result[3] != null ? result[3] : "PENDING").append("\",");
                 jsonBuilder.append("\"totalAmount\": ").append(result[4] != null ? result[4] : "0").append(",");
                 
                 // Format shipping address as JSON string for frontend parsing
@@ -266,22 +281,21 @@ public class OrderServlet extends javax.servlet.http.HttpServlet {
                 jsonBuilder.append("\"paymentMethod\": \"").append(result[6] != null ? result[6] : "STRIPE").append("\",");
                 jsonBuilder.append("\"createdAt\": \"").append(result[7] != null ? result[7] : "").append("\",");
                 
+                // Customer information
                 String firstName = result[8] != null ? (String) result[8] : null;
                 String lastName = result[9] != null ? (String) result[9] : null;
+                String email = result[10] != null ? (String) result[10] : null;
+                
                 if (firstName != null && lastName != null) {
                     jsonBuilder.append("\"customerName\": \"").append(escapeJson(firstName + " " + lastName)).append("\",");
                 } else {
                     jsonBuilder.append("\"customerName\": \"Unknown Customer\",");
                 }
-                jsonBuilder.append("\"customerEmail\": \"").append(escapeJson(result[10] != null ? result[10].toString() : "")).append("\",");
-                jsonBuilder.append("\"items\": \"").append(escapeJson(getOrderItemsJson(id, session))).append("\"");
-                if (firstName != null && lastName != null) {
-                    jsonBuilder.append("\"customerName\": \"").append(escapeJson(firstName + " " + lastName)).append("\",");
-                } else {
-                    jsonBuilder.append("\"customerName\": \"Unknown Customer\",");
-                }
-                jsonBuilder.append("\"customerEmail\": \"").append(escapeJson(result[10] != null ? result[10].toString() : "")).append("\",");
-                jsonBuilder.append("\"items\": ").append(getOrderItemsJson(id, session));
+                jsonBuilder.append("\"customerEmail\": \"").append(escapeJson(email != null ? email : "No email")).append("\",");
+                
+                // Get order items as JSON string for frontend parsing (consistent with other methods)
+                jsonBuilder.append("\"items\": \"").append(escapeJson(getOrderItemsJson(orderId, session))).append("\"");
+                
                 jsonBuilder.append("}}");
                 
                 out.print(jsonBuilder.toString());
