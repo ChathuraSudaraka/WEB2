@@ -146,7 +146,7 @@ const Signup = () => {
 
       if (result.success) {
         // Redirect to home or dashboard
-        navigate("/");
+        navigate("/login");
       } else {
         // Handle specific backend errors
         const errorMessage = result.error || "Registration failed. Please try again.";
