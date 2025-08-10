@@ -340,7 +340,7 @@ public class ProductServlet extends HttpServlet {
                 
                 System.out.println("Found " + products.size() + " products");
                 
-                // Simple JSON response (in a real app, use Jackson or Gson)
+                // Simple JSON response
                 out.print("[");
                 for (int i = 0; i < products.size(); i++) {
                     Product p = products.get(i);
@@ -399,7 +399,7 @@ public class ProductServlet extends HttpServlet {
                 jsonData.append(line);
             }
             
-            // Parse JSON manually (in a real app, use Jackson or Gson)
+            // Parse JSON manually
             String json = jsonData.toString();
             
             Product product = new Product();

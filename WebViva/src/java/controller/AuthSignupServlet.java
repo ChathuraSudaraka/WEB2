@@ -125,13 +125,13 @@ public class AuthSignupServlet extends HttpServlet {
                 user.setLastName(lastName);
                 user.setUsername(username);
                 user.setEmail(email);
-                user.setPassword(password); // In production, hash the password!
+                user.setPassword(password);
                 user.setPhone(phone);
                 user.setAddress(address);
                 user.setCity(city);
                 user.setPostalCode(postalCode);
                 user.setCountry(country);
-                user.setRole("USER"); // Default role for all new users
+                user.setRole("USER");
                 user.setCreatedAt(new Date());
                 user.setUpdatedAt(new Date());
                 user.setIsActive(true);
